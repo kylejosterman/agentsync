@@ -1,0 +1,10 @@
+{
+  "tools": [
+    "cursor",
+    "copilot",
+    "windsurf"
+  ],
+  "baseDirs": [
+    "."
+  ]
+}

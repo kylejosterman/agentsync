@@ -1,0 +1,9 @@
+---
+description: "General python development rules"
+alwaysApply: true
+---
+
+# Python Development
+
+Use type hints for all function signatures.
+Follow PEP 8 style guidelines.

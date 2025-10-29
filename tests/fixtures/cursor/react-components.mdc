@@ -1,0 +1,10 @@
+---
+description: "React component guidelines"
+alwaysApply: false
+globs: "src/**/*.tsx, src/**/*.jsx"
+---
+
+# React Components
+
+Use functional components with hooks.
+Always use TypeScript for props.
