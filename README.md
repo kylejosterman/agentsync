@@ -1,89 +1,86 @@
 # AgentSync
 
-A Rust CLI tool for synchronizing AI agent rules across multiple platforms.
+A Rust CLI tool for synchronizing AI agent rules across LLM tools.
 
-## Why AgentSync?
+Maintain a **single source of truth** for your AI agent rules and sync them bidirectionally across multiple tools.
 
-Maintain a **single source of truth** for your AI agent rules in `.agentsync/rules/` and sync them bidirectionally with:
+- 🔄 **Bidirectional sync** between Cursor, GitHub Copilot, and Windsurf
+- 📝 **Single source of truth** in `.agentsync/rules/`
+- ⚙️ **Tool-specific configurations** preserved automatically
+- ⚡ **Fast and reliable**, written in Rust
 
-- **Cursor** (`.cursor/rules/*.mdc`)
-- **GitHub Copilot** (`.github/instructions/*.md`)
-- **Windsurf** (`.windsurf/rules/*.md`)
+## Table of Contents
 
-**Key Features:**
+1. [Getting Started](#getting-started)
+1. [Installation](#installation)
+1. [Usage](#usage)
+1. [Configuration](#configuration)
+1. [Rule Format](#rule-format)
+1. [Contributing](#contributing)
+1. [License](#license)
 
-- Single source of truth for all your agent rules
-- Bidirectional sync: import from any tool, export to all
-- Tool-specific configurations preserved automatically
-- Fast and reliable (written in Rust)
+## Getting Started
+
+Initialize AgentSync and create your first rule:
+
+```bash
+agentsync init
+agentsync add python-dev
+# Edit .agentsync/rules/python-dev.md with your rule content
+agentsync sync
+```
+
+If you already have rules, import them:
+
+```bash
+agentsync init  # Prompts to import existing rules
+# Or import from a specific tool
+agentsync sync --from cursor
+```
 
 ## Installation
 
-```bash
-# From source (requires Rust)
-cargo install --path .
-```
-
-## Quick Start
+Install AgentSync via Homebrew:
 
 ```bash
-# Initialize in your project
-agentsync init
-
-# Create a new rule
-agentsync add python-dev
-
-# Edit .agentsync/rules/python-dev.md, then sync
-agentsync sync
-
-# Import existing rules from a tool
-agentsync sync --from cursor
+brew tap kylejosterman/agentsync
+brew install agentsync
 ```
 
-## Commands
+### Usage
 
-### `agentsync init`
-
-Initialize AgentSync in your project. Creates `.agentsync/rules/` and `agentsync.json`.
+### Initialize a project
 
 ```bash
 agentsync init
 ```
 
-If existing rules are found in Cursor, Copilot, or Windsurf, you'll be prompted to import them.
+Creates `.agentsync/rules/` directory and `agentsync.json` configuration file. If existing rules are found, you'll be prompted to import them.
 
-### `agentsync sync`
+**Note** Agentsync supports Cursor, Github Copilot and Windsurf as of 0.1.0.
 
-Sync rules to all enabled tools (default) or import from a specific tool.
-
-```bash
-# Sync to all enabled tools
-agentsync sync
-
-# Import from a specific tool
-agentsync sync --from cursor
-
-# Preview changes (dry-run)
-agentsync sync -n
-```
-
-### `agentsync add <name>`
-
-Create a new rule template.
+### Sync rules
 
 ```bash
-agentsync add python-dev
+agentsync sync                # Sync to all enabled tools
+agentsync sync --from cursor  # Import from a specific tool
+agentsync sync --dry-run      # Preview changes without writing files
 ```
 
-### Global Flags
+Creates a new rule template in `.agentsync/rules/<rule-name>.md`.
 
-- `-v, --verbose`: Detailed logging
+### Global options
+
+- `-v, --verbose`: Show detailed logging
 - `-n, --dry-run`: Preview changes without writing files
-- `-h, --help`: Show help
+- `-h, --help`: Show help information
+- `-V, --version`: Show version
+
+For complete command documentation, run `agentsync --help` or `agentsync <command> --help`.
 
 ## Configuration
 
-### `agentsync.json`
+AgentSync uses `agentsync.json` in your project root:
 
 ```json
 {
@@ -92,12 +89,12 @@ agentsync add python-dev
 }
 ```
 
-- **`tools`**: Which tools to sync with
-- **`baseDirs`**: Base directories (for monorepo support)
+- **`tools`**: Which tools to sync with (`cursor`, `copilot`, `windsurf`)
+- **`baseDirs`**: Base directories for monorepo support
 
-### Rule Format
+## Rule Format
 
-Rules in `.agentsync/rules/*.md` use YAML frontmatter:
+Rules are stored in `.agentsync/rules/*.md` with YAML frontmatter:
 
 ```yaml
 ---
@@ -107,7 +104,6 @@ globs: "**/*.py"
 
 cursor:
   alwaysApply: false
-  globs: "**/*.py"
 
 windsurf:
   trigger: glob
@@ -122,44 +118,65 @@ copilot:
 Your rule content here...
 ```
 
-### Key Fields
+### Common fields
 
-- **`targets`**: Which tools receive this rule (`["*"]` for all)
-- **`description`**: Used by agents for intelligent application
-- **`globs`**: File patterns for rule application
-- **`cursor.alwaysApply`**:
-  - `true` = Always Apply (always in context)
-  - `false` = Apply Intelligently (when relevant) or Apply to Specific Files (with globs)
-- **`windsurf.trigger`**:
-  - `manual` = Activate via @mention
-  - `always_on` = Always Apply
-  - `model_decision` = Apply Intelligently (uses description to decide)
-  - `glob` = Apply to Specific Files
-- **`copilot.applyTo`**: Glob patterns for file matching (always included in context)
+- **`targets`**: Which tools receive this rule (`["*"]` for all, or `["cursor", "copilot"]` for specific tools)
+- **`description`**: Used by agents to determine when to apply the rule intelligently
+- **`globs`**: File patterns for rule application (e.g., `"**/*.py"`, `"src/**/*.ts"`)
 
-## Examples
+### Tool-specific fields
 
-### Starting Fresh
+**Cursor** (`.cursor/rules/*.mdc`)
 
-```bash
-cd my-project
-agentsync init
-agentsync add python-dev
-agentsync add react-components
-# Edit rules in .agentsync/rules/
-agentsync sync
+- `alwaysApply: true` — Always in context
+- `alwaysApply: false` — Apply intelligently or to specific files (with globs)
+- Access via `@ruleName` for manual activation
+
+**Windsurf** (`.windsurf/rules/*.md`)
+
+- `trigger: manual` — Activate via @mention
+- `trigger: always_on` — Always in context
+- `trigger: model_decision` — Agent decides based on description
+- `trigger: glob` — Apply to files matching globs
+
+**GitHub Copilot** (`.github/instructions/*.md`)
+
+- `applyTo: "**/*.py"` — Apply to files matching glob pattern
+- Always included in context when files match
+
+### Examples
+
+**Always apply rule:**
+
+```yaml
+---
+targets: ["*"]
+description: "Core coding standards"
+cursor:
+  alwaysApply: true
+windsurf:
+  trigger: always_on
+---
 ```
 
-### Importing Existing Rules
+**Apply to specific files:**
 
-```bash
-cd my-project
-agentsync init  # Prompts to import
-# Or: agentsync sync --from cursor
-agentsync sync  # Sync to all tools
+```yaml
+---
+targets: ["*"]
+description: "Python best practices"
+globs: "**/*.py"
+cursor:
+  alwaysApply: false
+windsurf:
+  trigger: glob
+  globs: "**/*.py"
+copilot:
+  applyTo: "**/*.py"
+---
 ```
 
-### Tool-Specific Rule
+**Tool-specific rule:**
 
 ```yaml
 ---
@@ -168,43 +185,16 @@ description: "Cursor-specific shortcuts"
 cursor:
   alwaysApply: true
 ---
-
-# Cursor Shortcuts
-...
 ```
-
-## How It Works
-
-AgentSync intelligently converts between tool formats:
-
-- **Always Apply** (`alwaysApply: true`) → Windsurf `always_on` / Copilot `**`
-- **Apply Intelligently** (`alwaysApply: false`, no globs) → Windsurf `model_decision`
-- **Apply to Specific Files** (with globs) → Appropriate format for each tool
-- **Tool-specific settings** → Preserved during sync
-
-## Tool-Specific Behavior
-
-**Cursor** (`.cursor/rules/*.mdc`)
-
-- Always Apply: `alwaysApply: true`
-- Apply Intelligently: `alwaysApply: false`
-- Apply to Specific Files: `alwaysApply: false` with globs
-- Manual: Via `@ruleName`
-
-**GitHub Copilot** (`.github/instructions/*.md`)
-
-- Always included with optional `applyTo` for glob patterns
-
-**Windsurf** (`.windsurf/rules/*.md`)
-
-- **Manual**: Activate via @mention (`manual`)
-- **Always Apply**: Always in context (`always_on`)
-- **Apply Intelligently**: Model decides when to apply based on description (`model_decision`)
-- **Apply to Specific Files**: Applied to files matching globs (`glob`)
 
 ## Contributing
 
+Contributions are welcome. To get started:
+
 ```bash
+# Install from source
+cargo install --path .
+
 # Run tests
 cargo test
 
@@ -217,6 +207,6 @@ cargo fmt
 
 ## License
 
-MIT License - see [LICENSE](LICENSE) for details
+AgentSync is licensed under the [MIT License](LICENSE).
 
 ---
