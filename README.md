@@ -1,6 +1,6 @@
 # AgentSync
 
-A CLI tool for synchronizing AI agent rules across Cursor, GitHub Copilot, and Windsurf.
+A Rust CLI tool for synchronizing AI agent rules across multiple platforms.
 
 ## Why AgentSync?
 
