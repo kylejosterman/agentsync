@@ -1,12 +1,4 @@
-//! Format conversion logic for rule files
-//!
-//! This module implements bidirectional conversion between `AgentSync` format
-//! and tool-specific formats (Cursor, Windsurf, Copilot).
-//!
-//! Conversion includes:
-//! - Frontmatter transformation
-//! - Intelligent inference of tool-specific settings
-//! - Glob pattern normalization
+//! Bidirectional conversion between AgentSync and tool formats.
 
 use crate::models::{CopilotConfig, CursorConfig, WindsurfConfig, WindsurfTrigger};
 use itertools::Itertools;
@@ -28,29 +20,21 @@ pub use windsurf::{
     windsurf_to_agentsync,
 };
 
-// ============================================================================
-// Common Constants
-// ============================================================================
-
+// Common constants
 pub(crate) const GLOB_UNIVERSAL_DOUBLE_STAR: &str = "**";
 pub(crate) const GLOB_UNIVERSAL_RECURSIVE: &str = "**/*";
 pub(crate) const TARGET_ALL: &str = "*";
 
-// ============================================================================
-// Common Utilities
-// ============================================================================
-
-/// Normalize glob patterns by trimming whitespace around commas
+/// Normalize globs by trimming whitespace around commas
 #[must_use]
 pub fn normalize_globs(globs: &str) -> String {
     if globs.is_empty() {
         return String::new();
     }
-
-    globs.split(',').map(str::trim).format(", ").to_string()
+    globs.split(',').map(str::trim).format(",").to_string()
 }
 
-/// Check if a glob pattern is universal (applies to all files)
+/// Check if glob is universal (applies to all files)
 pub(crate) fn is_universal_glob(globs: &str) -> bool {
     let normalized = globs.trim();
     normalized.is_empty()
@@ -58,11 +42,7 @@ pub(crate) fn is_universal_glob(globs: &str) -> bool {
         || normalized == GLOB_UNIVERSAL_DOUBLE_STAR
 }
 
-// ============================================================================
-// Configuration Mode
-// ============================================================================
-
-/// Configuration mode for unified config creation
+/// Unified configuration mode
 #[derive(Debug, Clone)]
 pub(crate) enum ConfigMode<'a> {
     AlwaysOn,
@@ -71,7 +51,7 @@ pub(crate) enum ConfigMode<'a> {
     Glob(&'a str),
 }
 
-/// Create all tool configs from a unified configuration mode
+/// Create tool configs from unified mode
 pub(crate) fn create_all_configs(
     mode: &ConfigMode<'_>,
 ) -> (CursorConfig, WindsurfConfig, CopilotConfig, String) {
@@ -156,7 +136,7 @@ mod tests {
     fn test_normalize_globs_multiple() {
         assert_eq!(
             normalize_globs("src/**/*.py,tests/**/*.py"),
-            "src/**/*.py, tests/**/*.py"
+            "src/**/*.py,tests/**/*.py"
         );
     }
 
@@ -164,7 +144,7 @@ mod tests {
     fn test_normalize_globs_with_spaces() {
         assert_eq!(
             normalize_globs("  src/**/*.py  ,  tests/**/*.py  "),
-            "src/**/*.py, tests/**/*.py"
+            "src/**/*.py,tests/**/*.py"
         );
     }
 

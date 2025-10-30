@@ -1,65 +1,9 @@
-//! Security utilities for path validation and traversal protection
-//!
-//! This module provides functions to prevent path traversal attacks and ensure
-//! that all file operations stay within allowed boundaries.
-//!
-//! # Security Considerations
-//!
-//! Path traversal attacks can occur when user-provided paths contain sequences
-//! like `..` or absolute paths that escape the intended base directory. This
-//! module provides explicit validation to prevent such attacks.
-//!
-//! # Example
-//!
-//! ```rust,ignore
-//! use agentsync::security::validate_path_within_base;
-//! use std::path::Path;
-//!
-//! let base = Path::new("/project");
-//! let safe_path = Path::new("/project/subdir/file.txt");
-//! let unsafe_path = Path::new("/project/../etc/passwd");
-//!
-//! assert!(validate_path_within_base(base, safe_path).is_ok());
-//! assert!(validate_path_within_base(base, unsafe_path).is_err());
-//! ```
+//! Path validation to prevent traversal attacks and ensure operations stay within boundaries.
 
 use crate::{AgentSyncError, Result};
 use std::path::{Path, PathBuf};
 
-/// Validate that a target path is within a base directory
-///
-/// This function performs the following checks:
-/// 1. Canonicalizes both base and target paths (resolves symlinks, `.`, `..`)
-/// 2. Verifies that the canonical target path starts with the canonical base path
-/// 3. Returns an error if the target escapes the base directory
-///
-/// # Security
-///
-/// This function protects against:
-/// - Path traversal attacks using `..`
-/// - Absolute paths that escape the base directory
-/// - Symlink attacks that point outside the base directory
-///
-/// # Arguments
-///
-/// * `base` - The base directory that the target must be within
-/// * `target` - The target path to validate
-///
-/// # Errors
-///
-/// Returns `PathTraversal` error if:
-/// - The target path escapes the base directory
-/// - The base path doesn't exist or can't be canonicalized
-/// - The target path (or its parent) doesn't exist or can't be canonicalized
-///
-/// # Example
-///
-/// ```rust,ignore
-/// let base = Path::new("/project");
-/// let target = Path::new("/project/subdir/file.txt");
-///
-/// validate_path_within_base(base, target)?;
-/// ```
+/// Validate target path is within base directory (protects against traversal and symlink attacks)
 pub fn validate_path_within_base(base: &Path, target: &Path) -> Result<()> {
     // Canonicalize base directory (must exist)
     let canonical_base = base.canonicalize().map_err(|e| {
@@ -108,10 +52,7 @@ pub fn validate_path_within_base(base: &Path, target: &Path) -> Result<()> {
     Ok(())
 }
 
-/// Canonicalize the first existing ancestor of a path
-///
-/// This helper function walks up the directory tree until it finds an existing
-/// directory that can be canonicalized.
+/// Walk up directory tree to find first existing ancestor for canonicalization
 fn canonicalize_existing_ancestor(path: &Path) -> Result<PathBuf> {
     let mut current = path;
 
@@ -131,21 +72,7 @@ fn canonicalize_existing_ancestor(path: &Path) -> Result<PathBuf> {
     }
 }
 
-/// Validate that a relative path doesn't contain path traversal sequences
-///
-/// This is a simpler check that doesn't require the paths to exist.
-/// It checks for:
-/// - Absolute paths
-/// - Path components that are `..`
-/// - Empty paths
-///
-/// # Arguments
-///
-/// * `path` - The relative path to validate
-///
-/// # Errors
-///
-/// Returns `PathTraversal` error if the path is absolute or contains `..`
+/// Validate relative path doesn't contain `..` or absolute paths
 pub fn validate_relative_path(path: &Path) -> Result<()> {
     // Check if path is absolute
     if path.is_absolute() {
@@ -168,14 +95,7 @@ pub fn validate_relative_path(path: &Path) -> Result<()> {
     Ok(())
 }
 
-/// Validate a list of base directories
-///
-/// Ensures that:
-/// - All paths are relative (not absolute)
-/// - No paths contain `..` traversal sequences
-/// - No paths are empty
-///
-/// This is used for validating the `baseDirs` configuration field.
+/// Validate baseDirs list (no empty, no `..` in relative paths)
 pub fn validate_base_dirs(base_dirs: &[String]) -> Result<()> {
     if base_dirs.is_empty() {
         return Err(AgentSyncError::ConfigError {
@@ -239,7 +159,10 @@ mod tests {
 
         let result = validate_path_within_base(base, &target);
         assert!(result.is_err());
-        assert!(matches!(result.unwrap_err(), AgentSyncError::PathTraversal { .. }));
+        assert!(matches!(
+            result.unwrap_err(),
+            AgentSyncError::PathTraversal { .. }
+        ));
     }
 
     #[test]
@@ -305,7 +228,10 @@ mod tests {
         let path = Path::new("../etc/passwd");
         let result = validate_relative_path(path);
         assert!(result.is_err());
-        assert!(matches!(result.unwrap_err(), AgentSyncError::PathTraversal { .. }));
+        assert!(matches!(
+            result.unwrap_err(),
+            AgentSyncError::PathTraversal { .. }
+        ));
     }
 
     #[test]
@@ -398,4 +324,3 @@ mod tests {
         );
     }
 }
-

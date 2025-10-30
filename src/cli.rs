@@ -1,6 +1,4 @@
-//! Command-line interface definitions
-//!
-//! This module defines the CLI structure using clap's derive macros.
+//! CLI definitions using clap derive macros.
 
 use clap::{Parser, Subcommand};
 
@@ -30,10 +28,10 @@ pub enum Commands {
 
     /// Sync rules between AgentSync and tools
     #[command(
-        about = "Sync rules from .agentsync/rules/ to enabled tools (default) or from a specific tool"
+        about = "Sync rules from .agentsync/rules/ to enabled tools (default) or from a tool to .agentsync/rules/"
     )]
     Sync {
-        /// Sync FROM a specific tool TO .agentsync/rules/
+        /// Sync from a tool to .agentsync/rules/
         #[arg(long, value_name = "TOOL")]
         from: Option<String>,
 
@@ -54,15 +52,6 @@ pub enum Commands {
 impl Cli {
     pub fn parse_args() -> Self {
         Self::parse()
-    }
-
-    /// Parse arguments from an iterator (useful for testing)
-    pub fn parse_args_from<I, T>(args: I) -> Self
-    where
-        I: IntoIterator<Item = T>,
-        T: Into<std::ffi::OsString> + Clone,
-    {
-        Self::parse_from(args)
     }
 }
 

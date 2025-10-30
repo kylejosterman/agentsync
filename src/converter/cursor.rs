@@ -3,7 +3,7 @@
 use super::{ConfigMode, TARGET_ALL, create_all_configs, is_universal_glob, normalize_globs};
 use crate::models::{AgentSyncRule, CursorRule, Rule};
 
-/// Convert Cursor rule to `AgentSync` format with inference
+/// Convert Cursor rule to `AgentSync` rule
 #[must_use]
 pub fn cursor_to_agentsync(cursor_rule: &CursorRule) -> AgentSyncRule {
     let mode = if cursor_rule.always_apply {
@@ -28,7 +28,7 @@ pub fn cursor_to_agentsync(cursor_rule: &CursorRule) -> AgentSyncRule {
     }
 }
 
-/// Convert `AgentSync` rule to Cursor format
+/// Convert `AgentSync` rule to Cursor rule
 #[must_use]
 pub fn agentsync_to_cursor(agentsync_rule: &AgentSyncRule) -> CursorRule {
     let cursor_config = agentsync_rule.cursor.as_ref();
@@ -59,7 +59,7 @@ pub fn agentsync_to_cursor(agentsync_rule: &AgentSyncRule) -> CursorRule {
     }
 }
 
-/// Convert Cursor rule with content to `AgentSync` format
+/// Convert Cursor rule with content to `AgentSync` rule
 #[must_use]
 pub fn cursor_rule_to_agentsync(rule: &Rule<CursorRule>) -> Rule<AgentSyncRule> {
     Rule {
@@ -68,7 +68,7 @@ pub fn cursor_rule_to_agentsync(rule: &Rule<CursorRule>) -> Rule<AgentSyncRule> 
     }
 }
 
-/// Convert `AgentSync` rule with content to Cursor format
+/// Convert `AgentSync` rule with content to Cursor rule
 #[must_use]
 pub fn agentsync_rule_to_cursor(rule: &Rule<AgentSyncRule>) -> Rule<CursorRule> {
     Rule {
@@ -79,7 +79,6 @@ pub fn agentsync_rule_to_cursor(rule: &Rule<AgentSyncRule>) -> Rule<CursorRule> 
 
 #[cfg(test)]
 mod tests {
-    // Allow expect/unwrap in tests for brevity
     #![allow(clippy::expect_used)]
     #![allow(clippy::unwrap_used)]
 
@@ -139,7 +138,7 @@ mod tests {
     #[test]
     fn test_cursor_to_agentsync_manual_mode() {
         let cursor = CursorRule {
-            description: String::new(), // No description for true manual mode
+            description: String::new(), // No description for manual
             always_apply: false,
             globs: String::new(),
         };

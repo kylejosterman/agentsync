@@ -1,12 +1,4 @@
-//! File system operations for AgentSync
-//!
-//! This module provides utilities for:
-//! - Project root detection (finding agentsync.json)
-//! - File discovery for tool directories
-//! - Safe file reading and writing with error handling
-//! - Atomic file writes to prevent data corruption
-//! - File extension handling (.md vs .mdc)
-//! - Permission error handling
+//! File system operations: project root detection, file discovery, atomic writes.
 
 use crate::{AgentSyncError, Result};
 use fs_err as fs;
@@ -41,7 +33,6 @@ impl FromStr for Tool {
 }
 
 impl Tool {
-    /// Get the lowercase name of this tool
     #[must_use]
     pub const fn name(&self) -> &'static str {
         match self {
@@ -52,7 +43,6 @@ impl Tool {
         }
     }
 
-    /// Get the directory path for this tool relative to project root
     #[must_use]
     pub const fn directory(&self) -> &'static str {
         match self {
@@ -63,7 +53,6 @@ impl Tool {
         }
     }
 
-    /// Get the file extension for this tool
     #[must_use]
     pub const fn extension(&self) -> &'static str {
         match self {
@@ -79,12 +68,7 @@ impl std::fmt::Display for Tool {
     }
 }
 
-/// Write data to a file atomically using temp file + rename
-///
-/// This prevents partial writes and ensures atomicity:
-/// 1. Write to temporary file in same directory
-/// 2. Flush to disk
-/// 3. Atomically rename temp to target
+/// Write atomically using temp file + rename to prevent partial writes
 pub fn write_atomic<P: AsRef<Path>>(path: P, content: impl AsRef<[u8]>) -> Result<()> {
     let path = path.as_ref();
     let parent = path
@@ -102,9 +86,7 @@ pub fn write_atomic<P: AsRef<Path>>(path: P, content: impl AsRef<[u8]>) -> Resul
     Ok(())
 }
 
-/// Find the project root by searching for agentsync.json in the current directory
-///
-/// Returns the directory containing agentsync.json, or an error if not found.
+/// Find project root by locating agentsync.json
 pub fn find_project_root() -> Result<PathBuf> {
     let current_dir = std::env::current_dir()?;
 
@@ -116,15 +98,7 @@ pub fn find_project_root() -> Result<PathBuf> {
     }
 }
 
-/// Discover all rule files for a specific tool in the project
-///
-/// For Copilot, searches for `.instructions.md` files.
-/// For other tools, searches for files with their standard extension.
-///
-/// Returns a vector of file paths relative to the project root.
-///
-/// Validates that the tool directory is within the project root and filters out
-/// any discovered files that escape the project boundary.
+/// Discover rules for a tool in the project
 pub fn discover_rules(project_root: &Path, tool: Tool) -> Result<Vec<PathBuf>> {
     let tool_dir = project_root.join(tool.directory());
 
@@ -134,6 +108,7 @@ pub fn discover_rules(project_root: &Path, tool: Tool) -> Result<Vec<PathBuf>> {
         return Ok(Vec::new());
     }
 
+    // Copilot rules are .instructions.md files
     let pattern = match tool {
         Tool::Copilot => format!("{}/*.instructions.md", tool_dir.display()),
         _ => format!("{}/*.{}", tool_dir.display(), tool.extension()),
@@ -160,11 +135,7 @@ pub fn write_rule_file<P: AsRef<Path>>(path: P, content: &str) -> Result<()> {
     write_atomic(path, content)
 }
 
-/// Get the full path for a rule file in a tool directory
-///
-/// Constructs the path: `<project_root>/<tool_dir>/<rule_name>.<ext>`
-///
-/// Validates that the constructed path stays within the project root.
+/// Get full path for a rule, validating it stays within project root
 pub fn rule_path(project_root: &Path, tool: Tool, rule_name: &str) -> Result<PathBuf> {
     // Validate rule name doesn't contain path traversal
     crate::security::validate_relative_path(Path::new(rule_name))?;
@@ -180,12 +151,7 @@ pub fn rule_path(project_root: &Path, tool: Tool, rule_name: &str) -> Result<Pat
     Ok(path)
 }
 
-/// Extract the rule name from a file path (filename without extension)
-///
-/// For Copilot `.instructions.md` files, removes both `.instructions` and `.md`.
-/// For other files, removes just the extension.
-///
-/// Returns `None` if the path has no filename or no stem.
+/// Extract rule name from file path (removes extension)
 #[must_use]
 pub fn extract_rule_name(path: &Path) -> Option<String> {
     let filename = path.file_name()?.to_str()?;
@@ -199,12 +165,7 @@ pub fn extract_rule_name(path: &Path) -> Option<String> {
     path.file_stem().and_then(|s| s.to_str()).map(String::from)
 }
 
-/// Validate that a rule name follows kebab-case convention
-///
-/// Rule names must:
-/// - Contain only lowercase letters, numbers, and hyphens
-/// - Not start or end with a hyphen
-/// - Not contain consecutive hyphens
+/// Validate kebab-case rule name
 pub fn validate_rule_name(name: &str) -> Result<()> {
     if name.is_empty() {
         return Err(AgentSyncError::InvalidRuleName {
@@ -229,9 +190,7 @@ pub fn validate_rule_name(name: &str) -> Result<()> {
     }
 }
 
-/// Ensure a directory exists, creating it if necessary
-///
-/// Returns an error if the directory cannot be created due to permissions.
+/// Ensure directory exists, creating if needed
 pub fn ensure_directory<P: AsRef<Path>>(path: P) -> Result<()> {
     let path = path.as_ref();
 
@@ -397,7 +356,10 @@ mod tests {
         // Try to escape with ..
         let result = rule_path(project_root, Tool::Cursor, "../../../etc/passwd");
         assert!(result.is_err());
-        assert!(matches!(result.unwrap_err(), AgentSyncError::PathTraversal { .. }));
+        assert!(matches!(
+            result.unwrap_err(),
+            AgentSyncError::PathTraversal { .. }
+        ));
     }
 
     #[test]
@@ -475,8 +437,10 @@ mod tests {
 
         let copilot_dir = project_root.join(".github/instructions");
         fs::create_dir_all(&copilot_dir).expect("should create copilot dir");
-        fs::write(copilot_dir.join("rule2.instructions.md"), "copilot1").expect("test operation should succeed");
-        fs::write(copilot_dir.join("rule3.instructions.md"), "copilot2").expect("test operation should succeed");
+        fs::write(copilot_dir.join("rule2.instructions.md"), "copilot1")
+            .expect("test operation should succeed");
+        fs::write(copilot_dir.join("rule3.instructions.md"), "copilot2")
+            .expect("test operation should succeed");
 
         let cursor_rules =
             discover_rules(project_root, Tool::Cursor).expect("test operation should succeed");

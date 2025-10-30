@@ -1,0 +1,139 @@
+---
+description: Security validation and path handling
+alwaysApply: false
+globs: src/security.rs,src/fs.rs
+---
+# Security and File System Safety
+
+## Security Module ([security.rs](mdc:src/security.rs))
+
+Validates paths to prevent security vulnerabilities.
+
+### Path Traversal Prevention
+
+Never allow paths that:
+
+- Escape the project root using `..`
+- Use absolute paths outside project
+- Contain null bytes or invalid UTF-8
+- Point to system directories
+
+```rust
+pub fn validate_path(path: &Utf8Path, project_root: &Utf8Path) -> Result<()> {
+    // Ensure path is within project root
+    // Reject paths with .. that escape project
+    // Reject absolute paths outside project
+}
+```
+
+### Safe Path Construction
+
+Always:
+
+1. Canonicalize project root once
+2. Join paths using `Utf8Path::join()`
+3. Validate result is within project
+4. Handle symlinks carefully
+
+## File System Module ([fs.rs](mdc:src/fs.rs))
+
+Wrapper around `fs_err` with additional safety.
+
+### Core Functions
+
+```rust
+// Read operations
+pub fn read_to_string(path: &Utf8Path) -> Result<String>;
+pub fn read_dir(path: &Utf8Path) -> Result<Vec<Utf8PathBuf>>;
+pub fn exists(path: &Utf8Path) -> bool;
+
+// Write operations
+pub fn write(path: &Utf8Path, contents: &str) -> Result<()>;
+pub fn create_dir_all(path: &Utf8Path) -> Result<()>;
+pub fn remove_file(path: &Utf8Path) -> Result<()>;
+pub fn remove_dir_all(path: &Utf8Path) -> Result<()>;
+
+// Path utilities
+pub fn find_project_root() -> Result<Utf8PathBuf>;
+```
+
+### Project Root Detection
+
+Find project root by looking for:
+
+1. `agentsync.json` in current or parent directories
+2. `.git` directory as fallback
+3. Current directory if nothing found
+
+### Error Context
+
+All file operations use `fs_err` which includes:
+
+- Full file path in error messages
+- OS error details
+- Helpful context for users
+
+Example error:
+
+```bash
+Error: Failed to read file '/path/to/file.md': No such file or directory
+```
+
+### Path Type Requirements
+
+**Always use `camino` types:**
+
+- `Utf8Path` instead of `Path`
+- `Utf8PathBuf` instead of `PathBuf`
+
+**Benefits:**
+
+- Ensures paths are valid UTF-8
+- Prevents encoding issues across platforms
+- Better error messages
+- Consistent string handling
+
+### File Operation Patterns
+
+**Reading:**
+
+```rust
+let content = fs::read_to_string(&path)?;
+```
+
+**Writing:**
+
+```rust
+fs::create_dir_all(&parent_dir)?;
+fs::write(&file_path, &content)?;
+```
+
+**Listing:**
+
+```rust
+let entries = fs::read_dir(&dir_path)?;
+for entry in entries {
+    // process entry
+}
+```
+
+### Glob Patterns
+
+Use `glob` crate for pattern matching:
+
+```rust
+use glob::Pattern;
+
+let pattern = Pattern::new("**/*.rs")?;
+if pattern.matches_path(&path) {
+    // path matches
+}
+```
+
+## Security Best Practices
+
+1. **Never trust user input** - validate all paths
+2. **Fail secure** - reject suspicious paths, don't try to "fix" them
+3. **Audit file operations** - log all writes in verbose mode
+4. **Limit blast radius** - only operate within project root
+5. **Check before write** - validate destination before creating files

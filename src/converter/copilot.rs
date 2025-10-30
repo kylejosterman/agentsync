@@ -6,10 +6,9 @@ use super::{
 };
 use crate::models::{AgentSyncRule, CopilotRule, Rule};
 
-/// Convert Copilot rule to `AgentSync` format with inference
+/// Convert Copilot rule to `AgentSync` rule
 #[must_use]
 pub fn copilot_to_agentsync(copilot_rule: &CopilotRule) -> AgentSyncRule {
-    // Determine configuration mode based on Copilot applyTo pattern
     let mode = if is_universal_glob(&copilot_rule.apply_to) {
         ConfigMode::AlwaysOn
     } else {
@@ -28,7 +27,7 @@ pub fn copilot_to_agentsync(copilot_rule: &CopilotRule) -> AgentSyncRule {
     }
 }
 
-/// Convert `AgentSync` rule to Copilot format
+/// Convert `AgentSync` rule to Copilot rule
 #[must_use]
 pub fn agentsync_to_copilot(agentsync_rule: &AgentSyncRule) -> CopilotRule {
     let copilot_config = agentsync_rule.copilot.as_ref();
@@ -37,7 +36,7 @@ pub fn agentsync_to_copilot(agentsync_rule: &AgentSyncRule) -> CopilotRule {
         description: agentsync_rule.description.clone(),
         apply_to: copilot_config.map_or_else(
             || {
-                // Fallback: use global globs if no copilot-specific config
+                // Use global globs if no copilot-specific config
                 if is_universal_glob(&agentsync_rule.globs) {
                     GLOB_UNIVERSAL_DOUBLE_STAR.to_string()
                 } else {
@@ -49,7 +48,7 @@ pub fn agentsync_to_copilot(agentsync_rule: &AgentSyncRule) -> CopilotRule {
     }
 }
 
-/// Convert Copilot rule with content to `AgentSync` format
+/// Convert Copilot rule with content to `AgentSync` rule
 #[must_use]
 pub fn copilot_rule_to_agentsync(rule: &Rule<CopilotRule>) -> Rule<AgentSyncRule> {
     Rule {
@@ -58,7 +57,7 @@ pub fn copilot_rule_to_agentsync(rule: &Rule<CopilotRule>) -> Rule<AgentSyncRule
     }
 }
 
-/// Convert `AgentSync` rule with content to Copilot format
+/// Convert `AgentSync` rule with content to Copilot rule
 #[must_use]
 pub fn agentsync_rule_to_copilot(rule: &Rule<AgentSyncRule>) -> Rule<CopilotRule> {
     Rule {
@@ -69,7 +68,6 @@ pub fn agentsync_rule_to_copilot(rule: &Rule<AgentSyncRule>) -> Rule<CopilotRule
 
 #[cfg(test)]
 mod tests {
-    // Allow expect/unwrap in tests for brevity
     #![allow(clippy::expect_used)]
     #![allow(clippy::unwrap_used)]
 
@@ -84,7 +82,6 @@ mod tests {
         };
 
         let agentsync = copilot_to_agentsync(&copilot);
-
         assert_eq!(agentsync.globs, "**/*");
 
         let cursor_cfg = agentsync.cursor.expect("should have cursor config");
@@ -107,7 +104,6 @@ mod tests {
         };
 
         let agentsync = copilot_to_agentsync(&copilot);
-
         assert_eq!(agentsync.globs, "**/*.py");
 
         let cursor_cfg = agentsync.cursor.expect("should have cursor config");

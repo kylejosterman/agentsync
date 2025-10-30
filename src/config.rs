@@ -1,6 +1,4 @@
-//! Configuration file handling for agentsync.json
-//!
-//! This module provides functions to load, validate, and save AgentSync configuration.
+//! Load, validate, and save agentsync.json configuration.
 
 use crate::fs::write_atomic;
 use crate::models::AgentSyncConfig;
@@ -29,7 +27,7 @@ pub fn load_config<P: AsRef<Path>>(path: P) -> Result<AgentSyncConfig> {
     Ok(config)
 }
 
-/// Save configuration to agentsync.json atomically
+/// Save config atomically
 pub fn save_config<P: AsRef<Path>>(path: P, config: &AgentSyncConfig) -> Result<()> {
     let path = path.as_ref();
 
@@ -44,7 +42,7 @@ pub fn save_config<P: AsRef<Path>>(path: P, config: &AgentSyncConfig) -> Result<
     Ok(())
 }
 
-/// Create default configuration
+/// Create default config
 pub fn create_default_config() -> AgentSyncConfig {
     AgentSyncConfig::default()
 }

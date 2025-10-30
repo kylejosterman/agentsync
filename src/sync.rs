@@ -1,18 +1,14 @@
-//! Sync engine for bidirectional rule synchronization
-//!
-//! This module implements the core sync logic for synchronizing rules between
-//! AgentSync format and tool-specific formats (Cursor, Copilot, Windsurf).
-//!
-//! The sync engine uses the processor pattern to delegate tool-specific logic
-//! to individual processor implementations, making it easy to add new tools.
+//! Bidirectional sync engine for AgentSync ↔ tool formats.
 
-use crate::fs::{Tool, discover_rules, extract_rule_name, read_rule_file, rule_path, write_rule_file};
+use crate::fs::{
+    Tool, discover_rules, extract_rule_name, read_rule_file, rule_path, write_rule_file,
+};
 use crate::models::AgentSyncRule;
 use crate::parser::{parse_frontmatter, serialize_frontmatter};
 use crate::processor::get_processor;
 use crate::{AgentSyncError, Result};
-use tracing::{debug, info};
 use std::path::Path;
+use tracing::{debug, info};
 
 /// Options for sync operations
 #[derive(Debug, Clone, Default)]
@@ -32,27 +28,23 @@ pub struct SyncResult {
 }
 
 impl SyncResult {
-    /// Create a new empty sync result
     pub fn new() -> Self {
         Self::default()
     }
 
-    /// Get total number of rules processed
     pub fn total_processed(&self) -> usize {
         self.added.len() + self.updated.len() + self.skipped.len()
     }
 
-    /// Check if there were any changes (added or updated)
     pub fn has_changes(&self) -> bool {
         !self.added.is_empty() || !self.updated.is_empty()
     }
 
-    /// Check if there were any errors
     pub fn has_errors(&self) -> bool {
         !self.errors.is_empty()
     }
 
-    /// Print a summary of the sync operation
+    /// Print sync summary
     #[allow(clippy::print_stdout)] // This is user-facing output, not debug logging
     pub fn print_summary(&self, dry_run: bool) {
         let prefix = if dry_run { "[DRY RUN] " } else { "" };
@@ -99,9 +91,6 @@ impl SyncResult {
 }
 
 /// Sync rules from AgentSync format to all enabled tools
-///
-/// Reads rules from `.agentsync/rules/` and writes them to tool-specific directories
-/// based on the `targets` field and enabled tools in config.
 pub fn sync_to_tools(
     project_root: &Path,
     enabled_tools: &[String],
@@ -239,10 +228,7 @@ fn sync_rule_to_tool(
     Ok(())
 }
 
-/// Sync rules from a specific tool to AgentSync format
-///
-/// Reads rules from a tool-specific directory and writes them to `.agentsync/rules/`
-/// after converting to AgentSync format.
+/// Sync rules from a tool to AgentSync
 pub fn sync_from_tool(
     project_root: &Path,
     tool: Tool,
@@ -288,16 +274,14 @@ pub fn sync_from_tool(
         };
 
         // Convert tool rule to AgentSync format
-        let agentsync_rule = match processor.convert_to_agentsync(
-            &content,
-            &tool_rule_path.display().to_string(),
-        ) {
-            Ok(rule) => rule,
-            Err(e) => {
-                result.errors.push((rule_name.clone(), e.to_string()));
-                continue;
-            }
-        };
+        let agentsync_rule =
+            match processor.convert_to_agentsync(&content, &tool_rule_path.display().to_string()) {
+                Ok(rule) => rule,
+                Err(e) => {
+                    result.errors.push((rule_name.clone(), e.to_string()));
+                    continue;
+                }
+            };
 
         // Write to AgentSync directory
         let agentsync_path = rule_path(project_root, Tool::AgentSync, &rule_name)?;

@@ -18,7 +18,8 @@ use agentsync::models::{
 use agentsync::parser::{parse_frontmatter, serialize_frontmatter};
 
 const CURSOR_REACT_FIXTURE: &str = include_str!("fixtures/cursor/react-components.mdc");
-const COPILOT_PYTHON_FIXTURE: &str = include_str!("fixtures/copilot/python-standards.instructions.md");
+const COPILOT_PYTHON_FIXTURE: &str =
+    include_str!("fixtures/copilot/python-standards.instructions.md");
 const WINDSURF_PYTHON_FIXTURE: &str = include_str!("fixtures/windsurf/python-dev.md");
 const AGENTSYNC_RUST_FIXTURE: &str = include_str!("fixtures/agentsync/rust-dev.md");
 
@@ -35,27 +36,27 @@ fn test_cursor_fixture_to_agentsync() {
         "React component guidelines"
     );
     assert!(!cursor_rule.frontmatter.always_apply);
-    assert_eq!(cursor_rule.frontmatter.globs, "src/**/*.tsx, src/**/*.jsx");
+    assert_eq!(cursor_rule.frontmatter.globs, "src/**/*.tsx,src/**/*.jsx");
 
     let agentsync_rule = cursor_rule_to_agentsync(&cursor_rule);
 
     // Verify inference: auto attached with globs → glob mode
     assert_eq!(
         agentsync_rule.frontmatter.globs,
-        "src/**/*.tsx, src/**/*.jsx"
+        "src/**/*.tsx,src/**/*.jsx"
     );
     assert_eq!(agentsync_rule.frontmatter.targets, vec!["*"]);
 
     let cursor_cfg = agentsync_rule.frontmatter.cursor.as_ref().unwrap();
     assert!(!cursor_cfg.always_apply);
-    assert_eq!(cursor_cfg.globs, "src/**/*.tsx, src/**/*.jsx");
+    assert_eq!(cursor_cfg.globs, "src/**/*.tsx,src/**/*.jsx");
 
     let windsurf_cfg = agentsync_rule.frontmatter.windsurf.as_ref().unwrap();
     assert_eq!(windsurf_cfg.trigger, WindsurfTrigger::Glob);
-    assert_eq!(windsurf_cfg.globs, "src/**/*.tsx, src/**/*.jsx");
+    assert_eq!(windsurf_cfg.globs, "src/**/*.tsx,src/**/*.jsx");
 
     let copilot_cfg = agentsync_rule.frontmatter.copilot.as_ref().unwrap();
-    assert_eq!(copilot_cfg.apply_to, "src/**/*.tsx, src/**/*.jsx");
+    assert_eq!(copilot_cfg.apply_to, "src/**/*.tsx,src/**/*.jsx");
 
     // Verify content is preserved
     assert!(agentsync_rule.content.contains("React Components"));
@@ -113,7 +114,7 @@ fn test_windsurf_fixture_to_agentsync() {
     );
     assert_eq!(
         windsurf_rule.frontmatter.globs,
-        "src/autopager/**/*.py, tests/**/*.py"
+        "src/autopager/**/*.py,tests/**/*.py"
     );
 
     let agentsync_rule = windsurf_rule_to_agentsync(&windsurf_rule);
@@ -127,7 +128,7 @@ fn test_windsurf_fixture_to_agentsync() {
 
     let windsurf_cfg = agentsync_rule.frontmatter.windsurf.as_ref().unwrap();
     assert_eq!(windsurf_cfg.trigger, WindsurfTrigger::ModelDecision);
-    assert_eq!(windsurf_cfg.globs, "src/autopager/**/*.py, tests/**/*.py");
+    assert_eq!(windsurf_cfg.globs, "src/autopager/**/*.py,tests/**/*.py");
 
     // Verify content is preserved
     assert!(agentsync_rule.content.contains("Python Development"));
@@ -154,17 +155,17 @@ fn test_windsurf_glob_mode_conversion() {
     let agentsync_rule = windsurf_rule_to_agentsync(&windsurf_rule);
 
     // Verify inference: glob mode → auto attached with globs
-    assert_eq!(agentsync_rule.frontmatter.globs, "**/*.ts, **/*.tsx");
+    assert_eq!(agentsync_rule.frontmatter.globs, "**/*.ts,**/*.tsx");
 
     let cursor_cfg = agentsync_rule.frontmatter.cursor.as_ref().unwrap();
     assert!(!cursor_cfg.always_apply);
-    assert_eq!(cursor_cfg.globs, "**/*.ts, **/*.tsx");
+    assert_eq!(cursor_cfg.globs, "**/*.ts,**/*.tsx");
 
     let windsurf_cfg = agentsync_rule.frontmatter.windsurf.as_ref().unwrap();
     assert_eq!(windsurf_cfg.trigger, WindsurfTrigger::Glob);
 
     let copilot_cfg = agentsync_rule.frontmatter.copilot.as_ref().unwrap();
-    assert_eq!(copilot_cfg.apply_to, "**/*.ts, **/*.tsx");
+    assert_eq!(copilot_cfg.apply_to, "**/*.ts,**/*.tsx");
 }
 
 // ============================================================================
@@ -241,7 +242,6 @@ fn test_copilot_universal_pattern_conversion() {
 fn test_agentsync_fixture_to_cursor() {
     let agentsync_rule: Rule<AgentSyncRule> =
         parse_frontmatter(AGENTSYNC_RUST_FIXTURE, None).unwrap();
-
     assert_eq!(
         agentsync_rule.frontmatter.description,
         "Comprehensive rule example"
@@ -250,7 +250,6 @@ fn test_agentsync_fixture_to_cursor() {
     assert_eq!(agentsync_rule.frontmatter.targets, vec!["*"]);
 
     let cursor_rule = agentsync_rule_to_cursor(&agentsync_rule);
-
     assert_eq!(
         cursor_rule.frontmatter.description,
         "Comprehensive rule example"
@@ -441,8 +440,8 @@ fn test_complex_glob_patterns() {
     let agentsync = agentsync::converter::cursor_to_agentsync(&cursor);
     let back_to_cursor = agentsync::converter::agentsync_to_cursor(&agentsync);
 
-    // Verify globs are normalized (spaces added around commas) but preserved
-    let normalized = "src/**/*.{ts, tsx}, tests/**/*.test.ts, !**/*.spec.ts";
+    // Verify globs are normalized (spaces removed around commas) but preserved
+    let normalized = "src/**/*.{ts,tsx},tests/**/*.test.ts,!**/*.spec.ts";
     assert_eq!(back_to_cursor.globs, normalized);
 }
 

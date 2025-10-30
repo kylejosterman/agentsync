@@ -1,28 +1,10 @@
-//! Command handlers for AgentSync CLI
-//!
-//! This module contains the implementation of CLI commands:
-//! - `init`: Initialize a new AgentSync project
-//! - `add`: Add a new rule template
-//!
-//! Each command is implemented as a public function that can be called from the main CLI runner.
+//! CLI command implementations (`init`, `add`).
 
-use crate::{config, fs, sync, AgentSyncError, Result};
+use crate::{AgentSyncError, Result, config, fs, sync};
 use itertools::Itertools;
 use tracing::info;
 
-/// Run the init command
-///
-/// Creates a new AgentSync project by:
-/// 1. Creating `.agentsync/rules/` directory
-/// 2. Creating default `agentsync.json` config
-/// 3. Optionally importing existing rules from tool directories
-///
-/// # Errors
-///
-/// Returns an error if:
-/// - Project is already initialized (agentsync.json exists)
-/// - Directory creation fails
-/// - User selects an invalid tool to import from
+/// Initialize AgentSync: create directories, config, and optionally import existing rules
 pub fn run_init(verbose: bool) -> Result<()> {
     use fs_err as fs;
     use std::io::{self, Write};
@@ -120,22 +102,7 @@ pub fn run_init(verbose: bool) -> Result<()> {
     Ok(())
 }
 
-/// Run the add command
-///
-/// Creates a new rule template file in `.agentsync/rules/`.
-///
-/// # Arguments
-///
-/// * `name` - The name of the rule (should be kebab-case)
-/// * `verbose` - Enable verbose logging
-///
-/// # Errors
-///
-/// Returns an error if:
-/// - Rule name is empty or contains invalid characters
-/// - Rule name contains path traversal sequences
-/// - Rule file already exists
-/// - File creation fails
+/// Create a new rule template in `.agentsync/rules/`
 pub fn run_add(name: &str, verbose: bool) -> Result<()> {
     if name.is_empty() {
         return Err(AgentSyncError::Other(
@@ -188,14 +155,7 @@ pub fn run_add(name: &str, verbose: bool) -> Result<()> {
     Ok(())
 }
 
-/// Create a template for a new rule
-///
-/// Generates a YAML frontmatter template with default configuration for all tools.
-/// Converts the rule name from kebab-case to Title Case for the heading.
-///
-/// # Arguments
-///
-/// * `name` - The rule name (e.g., "python-dev" becomes "Python Dev")
+/// Generate rule template with YAML frontmatter. Converts kebab-case to Title Case.
 fn create_rule_template(name: &str) -> String {
     use indoc::formatdoc;
 
@@ -227,7 +187,6 @@ fn create_rule_template(name: &str) -> String {
         copilot:
           applyTo: \"**\"
         ---
-
         # {title}
 
         Your rule content here...
@@ -266,28 +225,39 @@ mod tests {
         // Test that path traversal attempts are rejected
         let result = run_add("../../../etc/passwd", false);
         assert!(result.is_err());
-        assert!(matches!(result.unwrap_err(), AgentSyncError::PathTraversal { .. }));
+        assert!(matches!(
+            result.unwrap_err(),
+            AgentSyncError::PathTraversal { .. }
+        ));
     }
 
     #[test]
     fn test_run_add_rejects_forward_slash() {
         let result = run_add("subdir/rule", false);
         assert!(result.is_err());
-        assert!(matches!(result.unwrap_err(), AgentSyncError::PathTraversal { .. }));
+        assert!(matches!(
+            result.unwrap_err(),
+            AgentSyncError::PathTraversal { .. }
+        ));
     }
 
     #[test]
     fn test_run_add_rejects_backslash() {
         let result = run_add("subdir\\rule", false);
         assert!(result.is_err());
-        assert!(matches!(result.unwrap_err(), AgentSyncError::PathTraversal { .. }));
+        assert!(matches!(
+            result.unwrap_err(),
+            AgentSyncError::PathTraversal { .. }
+        ));
     }
 
     #[test]
     fn test_run_add_rejects_dot_dot() {
         let result = run_add("..rule", false);
         assert!(result.is_err());
-        assert!(matches!(result.unwrap_err(), AgentSyncError::PathTraversal { .. }));
+        assert!(matches!(
+            result.unwrap_err(),
+            AgentSyncError::PathTraversal { .. }
+        ));
     }
 }
-

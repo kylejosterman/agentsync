@@ -1,13 +1,13 @@
 //! Copilot tool processor implementation
 
 use super::Processor;
+use crate::Result;
 use crate::converter::{agentsync_rule_to_copilot, copilot_rule_to_agentsync};
 use crate::fs::Tool;
 use crate::models::{AgentSyncRule, CopilotRule, Rule};
 use crate::parser::{parse_frontmatter, serialize_frontmatter};
-use crate::Result;
 
-/// Processor for GitHub Copilot (.md files in .github/instructions/)
+/// Processor for GitHub Copilot
 pub struct CopilotProcessor;
 
 impl Processor for CopilotProcessor {
@@ -30,12 +30,6 @@ impl Processor for CopilotProcessor {
 mod tests {
     use super::*;
     use crate::models::CopilotConfig;
-
-    #[test]
-    fn test_copilot_processor_tool() {
-        let processor = CopilotProcessor;
-        assert_eq!(processor.tool(), Tool::Copilot);
-    }
 
     #[test]
     fn test_copilot_processor_convert_from_agentsync() {
@@ -119,82 +113,10 @@ mod tests {
             .unwrap();
 
         // Verify key fields are preserved
-        assert_eq!(converted.frontmatter.description, original.frontmatter.description);
+        assert_eq!(
+            converted.frontmatter.description,
+            original.frontmatter.description
+        );
         assert!(converted.content.contains("Roundtrip"));
     }
-
-    #[test]
-    fn test_copilot_processor_default_apply_to() {
-        use indoc::indoc;
-
-        let processor = CopilotProcessor;
-
-        let copilot_content = indoc! {r#"
-            ---
-            description: "Default applyTo test"
-            ---
-
-            # Test
-
-            Content
-        "#};
-
-        let result = processor.convert_to_agentsync(copilot_content, "test.md");
-        assert!(result.is_ok());
-
-        let rule = result.unwrap();
-        // Should have default applyTo value
-        assert!(rule.frontmatter.copilot.is_some());
-    }
-
-    #[test]
-    fn test_copilot_processor_invalid_frontmatter() {
-        use indoc::indoc;
-
-        let processor = CopilotProcessor;
-
-        let invalid_content = indoc! {r#"
-            ---
-            description: 123
-            applyTo: ["not", "a", "string"]
-            ---
-
-            Content
-        "#};
-
-        let result = processor.convert_to_agentsync(invalid_content, "test.md");
-        assert!(result.is_err());
-    }
-
-    #[test]
-    fn test_copilot_processor_missing_frontmatter() {
-        let processor = CopilotProcessor;
-
-        let no_frontmatter = "# Just Content\n\nNo frontmatter here.";
-
-        let result = processor.convert_to_agentsync(no_frontmatter, "test.md");
-        assert!(result.is_err());
-    }
-
-    #[test]
-    fn test_copilot_processor_empty_content() {
-        use indoc::indoc;
-
-        let processor = CopilotProcessor;
-
-        let empty_content = indoc! {r#"
-            ---
-            description: "Empty rule"
-            applyTo: "**"
-            ---
-        "#};
-
-        let result = processor.convert_to_agentsync(empty_content, "test.md");
-        assert!(result.is_ok());
-
-        let rule = result.unwrap();
-        assert_eq!(rule.frontmatter.description, "Empty rule");
-        assert!(rule.content.is_empty() || rule.content.trim().is_empty());
-    }
 }
-

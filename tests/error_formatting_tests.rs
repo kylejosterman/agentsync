@@ -137,14 +137,11 @@ fn test_config_error_formatting() {
 
 #[test]
 fn test_invalid_frontmatter_formatting() {
-    let yaml_err = serde_yaml::from_str::<serde_yaml::Value>("invalid: [unclosed")
-        .expect_err("should fail");
-
-    let err = AgentSyncError::invalid_frontmatter(
-        "test-rule.md",
-        Some(5),
-        yaml_err,
-    );
+    let err = AgentSyncError::FrontmatterParse {
+        file: "test-rule.md".to_string(),
+        line: Some(5),
+        message: "Missing closing '---' delimiter".to_string(),
+    };
     let msg = err.to_string();
 
     // Check main message
@@ -157,24 +154,21 @@ fn test_invalid_frontmatter_formatting() {
 
     // Check hints
     assert!(msg.contains("hint"));
-    assert!(msg.contains("valid YAML"));
+    assert!(msg.contains("key-value pairs"));
     assert!(msg.contains("---"));
     assert!(msg.contains("Example format"));
 }
 
 #[test]
 fn test_invalid_frontmatter_without_line_number() {
-    let yaml_err = serde_yaml::from_str::<serde_yaml::Value>("invalid: [unclosed")
-        .expect_err("should fail");
-
-    let err = AgentSyncError::invalid_frontmatter(
-        "test-rule.md",
-        None,
-        yaml_err,
-    );
+    let err = AgentSyncError::FrontmatterParse {
+        file: "test-rule.md".to_string(),
+        line: None,
+        message: "Missing opening '---' delimiter".to_string(),
+    };
     let msg = err.to_string();
 
-    // Should not contain our line number formatting (the YAML parser error itself may mention lines)
+    // Should not contain our line number formatting
     // Our format would be "test-rule.md at line X" so check that pattern doesn't exist
     assert!(!msg.contains("test-rule.md at"));
 
@@ -225,4 +219,3 @@ fn test_error_display_preserves_colors() {
     assert!(msg.len() > 50); // Should be longer due to ANSI codes
     assert!(msg.contains("Invalid tool name"));
 }
-
