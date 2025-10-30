@@ -1,8 +1,7 @@
 ---
 description: Description of this rule
-applyTo: '**'
+applyTo: **
 ---
-
 # Test Rule
 
 Your rule content here...

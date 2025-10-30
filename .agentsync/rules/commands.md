@@ -1,0 +1,151 @@
+---
+targets: *
+description: CLI command implementations and user interaction patterns
+globs: src/commands.rs,src/cli.rs
+cursor:
+  alwaysApply: false
+  globs: src/commands.rs,src/cli.rs
+windsurf:
+  trigger: glob
+  globs: src/commands.rs,src/cli.rs
+copilot:
+  applyTo: src/commands.rs,src/cli.rs
+---
+# CLI Command Implementation Patterns
+
+## Command Structure ([cli.rs](mdc:src/cli.rs))
+
+Commands are defined using `clap` derive macros:
+
+```rust
+#[derive(Debug, Parser)]
+pub struct Cli {
+    #[command(subcommand)]
+    pub command: Commands,
+
+    #[arg(short, long)]
+    pub verbose: bool,
+}
+
+#[derive(Debug, Subcommand)]
+pub enum Commands {
+    Init,
+    Sync {
+        #[arg(long)]
+        from: Option<String>,
+
+        #[arg(short, long)]
+        dry_run: bool,
+    },
+    Add {
+        name: String,
+    },
+}
+```
+
+## Command Implementations ([commands.rs](mdc:src/commands.rs))
+
+### `agentsync init`
+
+Creates initial project structure:
+
+1. Create `.agentsync/rules/` directory
+2. Create `agentsync.json` config file
+3. Detect existing rules from other tools
+4. Prompt user to import existing rules
+
+### `agentsync add <name>`
+
+Creates a new rule template:
+
+1. Create `.agentsync/rules/<name>.md` with template
+2. Include example frontmatter with all tool sections
+3. Provide instructions for editing
+
+### `agentsync sync`
+
+Sync from AgentSync to tools:
+
+1. Read `agentsync.json` config
+2. Read all `.agentsync/rules/*.md` files
+3. Convert to each enabled tool's format
+4. Write to tool-specific directories
+5. Display summary of changes
+
+### `agentsync sync --from <tool>`
+
+Import from a specific tool:
+
+1. Read tool-specific rules
+2. Convert to AgentSync format
+3. Write to `.agentsync/rules/`
+4. Display summary of changes
+
+## User Interaction Patterns
+
+### Output Guidelines
+
+- **Success**: Use owo-colors green for success messages
+- **Info**: Use regular output for informational messages
+- **Warnings**: Use owo-colors yellow for warnings
+- **Errors**: Use owo-colors red for errors
+- **Dry Run**: Prefix with "Would" to indicate no actual changes
+
+### Logging vs Output
+
+- **Logging** (`tracing`): For debug/internal information
+  - `debug!()` - Verbose debugging
+  - `info!()` - High-level operation info
+  - `warn!()` - Potential issues
+  - `error!()` - Errors
+
+- **Output** (`println!`): For user-facing messages
+  - Command results
+  - Summaries
+  - Prompts
+
+### Summary Format
+
+After operations, display:
+
+```bash
+✓ Created: 3 files
+✓ Updated: 2 files
+✓ Deleted: 1 file
+```
+
+In dry-run mode:
+
+```bash
+Would create: 3 files
+Would update: 2 files
+Would delete: 1 file
+```
+
+## Error Handling in Commands
+
+Commands should:
+
+1. Return `Result<()>` from [error.rs](mdc:src/error.rs)
+2. Use `?` to propagate errors
+3. Provide context in error messages
+4. Let main error handler format output
+
+## Interactive Prompts
+
+Use simple stdin/stdout for prompts:
+
+```rust
+use std::io::{self, Write};
+
+print!("Import existing rules? (y/n): ");
+io::stdout().flush()?;
+
+let mut input = String::new();
+io::stdin().read_line(&mut input)?;
+
+match input.trim().to_lowercase().as_str() {
+    "y" | "yes" => { /* import */ },
+    _ => { /* skip */ },
+}
+```

@@ -180,16 +180,36 @@ fn test_rule_path_construction() {
 
     // Test each tool
     let cursor_path = rule_path(project_root, Tool::Cursor, "python-dev").unwrap();
-    assert!(cursor_path.to_str().unwrap().ends_with(".cursor/rules/python-dev.mdc"));
+    assert!(
+        cursor_path
+            .to_str()
+            .unwrap()
+            .ends_with(".cursor/rules/python-dev.mdc")
+    );
 
     let copilot_path = rule_path(project_root, Tool::Copilot, "react-rules").unwrap();
-    assert!(copilot_path.to_str().unwrap().ends_with(".github/instructions/react-rules.instructions.md"));
+    assert!(
+        copilot_path
+            .to_str()
+            .unwrap()
+            .ends_with(".github/instructions/react-rules.instructions.md")
+    );
 
     let windsurf_path = rule_path(project_root, Tool::Windsurf, "rust-dev").unwrap();
-    assert!(windsurf_path.to_str().unwrap().ends_with(".windsurf/rules/rust-dev.md"));
+    assert!(
+        windsurf_path
+            .to_str()
+            .unwrap()
+            .ends_with(".windsurf/rules/rust-dev.md")
+    );
 
     let agentsync_path = rule_path(project_root, Tool::AgentSync, "general").unwrap();
-    assert!(agentsync_path.to_str().unwrap().ends_with(".agentsync/rules/general.md"));
+    assert!(
+        agentsync_path
+            .to_str()
+            .unwrap()
+            .ends_with(".agentsync/rules/general.md")
+    );
 }
 
 #[test]

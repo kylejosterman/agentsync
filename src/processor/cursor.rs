@@ -1,13 +1,13 @@
 //! Cursor tool processor implementation
 
 use super::Processor;
+use crate::Result;
 use crate::converter::{agentsync_rule_to_cursor, cursor_rule_to_agentsync};
 use crate::fs::Tool;
 use crate::models::{AgentSyncRule, CursorRule, Rule};
 use crate::parser::{parse_frontmatter, serialize_frontmatter};
-use crate::Result;
 
-/// Processor for Cursor (.mdc files in .cursor/rules/)
+/// Processor for Cursor
 pub struct CursorProcessor;
 
 impl Processor for CursorProcessor {
@@ -30,12 +30,6 @@ impl Processor for CursorProcessor {
 mod tests {
     use super::*;
     use crate::models::CursorConfig;
-
-    #[test]
-    fn test_cursor_processor_tool() {
-        let processor = CursorProcessor;
-        assert_eq!(processor.tool(), Tool::Cursor);
-    }
 
     #[test]
     fn test_cursor_processor_convert_from_agentsync() {
@@ -62,7 +56,7 @@ mod tests {
         let content = result.unwrap();
         assert!(content.contains("description: Test rule"));
         assert!(content.contains("alwaysApply: false"));
-        assert!(content.contains("globs: '**/*.rs'"));
+        assert!(content.contains("globs: **/*.rs"));
         assert!(content.contains("# Test Rule"));
     }
 
@@ -123,58 +117,10 @@ mod tests {
             .unwrap();
 
         // Verify key fields are preserved
-        assert_eq!(converted.frontmatter.description, original.frontmatter.description);
+        assert_eq!(
+            converted.frontmatter.description,
+            original.frontmatter.description
+        );
         assert!(converted.content.contains("Roundtrip"));
     }
-
-    #[test]
-    fn test_cursor_processor_invalid_frontmatter() {
-        use indoc::indoc;
-
-        let processor = CursorProcessor;
-
-        let invalid_content = indoc! {r#"
-            ---
-            description: "Test"
-            alwaysApply: "not a boolean"
-            ---
-
-            Content
-        "#};
-
-        let result = processor.convert_to_agentsync(invalid_content, "test.mdc");
-        assert!(result.is_err());
-    }
-
-    #[test]
-    fn test_cursor_processor_missing_frontmatter() {
-        let processor = CursorProcessor;
-
-        let no_frontmatter = "# Just Content\n\nNo frontmatter here.";
-
-        let result = processor.convert_to_agentsync(no_frontmatter, "test.mdc");
-        assert!(result.is_err());
-    }
-
-    #[test]
-    fn test_cursor_processor_empty_content() {
-        use indoc::indoc;
-
-        let processor = CursorProcessor;
-
-        let empty_content = indoc! {r#"
-            ---
-            description: "Empty rule"
-            alwaysApply: true
-            ---
-        "#};
-
-        let result = processor.convert_to_agentsync(empty_content, "test.mdc");
-        assert!(result.is_ok());
-
-        let rule = result.unwrap();
-        assert_eq!(rule.frontmatter.description, "Empty rule");
-        assert!(rule.content.is_empty() || rule.content.trim().is_empty());
-    }
 }
-

@@ -3,27 +3,14 @@
 use super::{ConfigMode, TARGET_ALL, create_all_configs, is_universal_glob, normalize_globs};
 use crate::models::{AgentSyncRule, Rule, WindsurfRule, WindsurfTrigger};
 
-/// Convert Windsurf rule to `AgentSync` format with inference
+/// Convert Windsurf rule to `AgentSync` format
 #[must_use]
 pub fn windsurf_to_agentsync(windsurf_rule: &WindsurfRule) -> AgentSyncRule {
-    // Determine configuration mode based on Windsurf trigger
     let mode = match windsurf_rule.trigger {
-        WindsurfTrigger::AlwaysOn => {
-            // Always Apply: rule is always in context
-            ConfigMode::AlwaysOn
-        }
-        WindsurfTrigger::Glob => {
-            // Apply to Specific Files: based on glob patterns
-            ConfigMode::Glob(&windsurf_rule.globs)
-        }
-        WindsurfTrigger::ModelDecision => {
-            // Apply Intelligently: model decides when relevant (requires description)
-            ConfigMode::Intelligent
-        }
-        WindsurfTrigger::Manual => {
-            // Manual: activate via @mention
-            ConfigMode::Manual
-        }
+        WindsurfTrigger::AlwaysOn => ConfigMode::AlwaysOn,
+        WindsurfTrigger::Glob => ConfigMode::Glob(&windsurf_rule.globs),
+        WindsurfTrigger::ModelDecision => ConfigMode::Intelligent,
+        WindsurfTrigger::Manual => ConfigMode::Manual,
     };
 
     let (cursor_config, mut windsurf_config, copilot_config, globs) = create_all_configs(&mode);
@@ -48,13 +35,13 @@ pub fn agentsync_to_windsurf(agentsync_rule: &AgentSyncRule) -> WindsurfRule {
     let windsurf_config = agentsync_rule.windsurf.as_ref();
     let trigger = windsurf_config.map_or_else(Default::default, |c| c.trigger.clone());
 
-    // For Always Apply mode, Windsurf should not have description or globs in frontmatter
+    // Always apply should not have description or globs
     let (description, globs) = if trigger == WindsurfTrigger::AlwaysOn {
         (String::new(), String::new())
     } else {
         let globs = windsurf_config.map_or_else(
             || {
-                // Fallback: use global globs if no windsurf-specific config
+                // Use global globs if no windsurf-specific config
                 if is_universal_glob(&agentsync_rule.globs) {
                     String::new()
                 } else {
@@ -73,7 +60,7 @@ pub fn agentsync_to_windsurf(agentsync_rule: &AgentSyncRule) -> WindsurfRule {
     }
 }
 
-/// Convert Windsurf rule with content to `AgentSync` format
+/// Convert Windsurf rule with content to `AgentSync` rule
 #[must_use]
 pub fn windsurf_rule_to_agentsync(rule: &Rule<WindsurfRule>) -> Rule<AgentSyncRule> {
     Rule {
@@ -82,7 +69,7 @@ pub fn windsurf_rule_to_agentsync(rule: &Rule<WindsurfRule>) -> Rule<AgentSyncRu
     }
 }
 
-/// Convert `AgentSync` rule with content to Windsurf format
+/// Convert `AgentSync` rule with content to Windsurf rule
 #[must_use]
 pub fn agentsync_rule_to_windsurf(rule: &Rule<AgentSyncRule>) -> Rule<WindsurfRule> {
     Rule {
@@ -93,7 +80,6 @@ pub fn agentsync_rule_to_windsurf(rule: &Rule<AgentSyncRule>) -> Rule<WindsurfRu
 
 #[cfg(test)]
 mod tests {
-    // Allow expect/unwrap in tests
     #![allow(clippy::expect_used)]
     #![allow(clippy::unwrap_used)]
 
@@ -132,19 +118,18 @@ mod tests {
         };
 
         let agentsync = windsurf_to_agentsync(&windsurf);
-
-        assert_eq!(agentsync.globs, "src/**/*.py, tests/**/*.py");
+        assert_eq!(agentsync.globs, "src/**/*.py,tests/**/*.py");
 
         let cursor_cfg = agentsync.cursor.expect("should have cursor config");
         assert!(!cursor_cfg.always_apply);
-        assert_eq!(cursor_cfg.globs, "src/**/*.py, tests/**/*.py");
+        assert_eq!(cursor_cfg.globs, "src/**/*.py,tests/**/*.py");
 
         let windsurf_cfg = agentsync.windsurf.expect("should have windsurf config");
         assert_eq!(windsurf_cfg.trigger, WindsurfTrigger::Glob);
-        assert_eq!(windsurf_cfg.globs, "src/**/*.py, tests/**/*.py");
+        assert_eq!(windsurf_cfg.globs, "src/**/*.py,tests/**/*.py");
 
         let copilot_cfg = agentsync.copilot.expect("should have copilot config");
-        assert_eq!(copilot_cfg.apply_to, "src/**/*.py, tests/**/*.py");
+        assert_eq!(copilot_cfg.apply_to, "src/**/*.py,tests/**/*.py");
     }
 
     #[test]
@@ -208,7 +193,7 @@ mod tests {
         let original = WindsurfRule {
             trigger: WindsurfTrigger::Glob,
             description: "Roundtrip test".to_string(),
-            globs: "src/**/*.py, tests/**/*.py".to_string(),
+            globs: "src/**/*.py,tests/**/*.py".to_string(),
         };
 
         let agentsync = windsurf_to_agentsync(&original);

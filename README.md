@@ -2,8 +2,6 @@
 
 A Rust CLI tool for synchronizing AI agent rules across LLM tools.
 
-Maintain a **single source of truth** for your AI agent rules and sync them bidirectionally across multiple tools.
-
 - 🔄 **Bidirectional sync** between Cursor, GitHub Copilot, and Windsurf
 - 📝 **Single source of truth** in `.agentsync/rules/`
 - ⚙️ **Tool-specific configurations** preserved automatically
@@ -49,7 +47,7 @@ brew install agentsync
 
 ### Usage
 
-### Initialize a project
+#### Initialize a project
 
 ```bash
 agentsync init
@@ -57,9 +55,9 @@ agentsync init
 
 Creates `.agentsync/rules/` directory and `agentsync.json` configuration file. If existing rules are found, you'll be prompted to import them.
 
-**Note** Agentsync supports Cursor, Github Copilot and Windsurf as of 0.1.0.
+**Note** Agentsync currently supports Cursor, Github Copilot and Windsurf
 
-### Sync rules
+#### Sync rules
 
 ```bash
 agentsync sync                # Sync to all enabled tools
@@ -69,7 +67,7 @@ agentsync sync --dry-run      # Preview changes without writing files
 
 Creates a new rule template in `.agentsync/rules/<rule-name>.md`.
 
-### Global options
+#### Global options
 
 - `-v, --verbose`: Show detailed logging
 - `-n, --dry-run`: Preview changes without writing files
@@ -112,9 +110,6 @@ windsurf:
 copilot:
   applyTo: "**/*.py"
 ---
-
-# Python Development
-
 Your rule content here...
 ```
 
@@ -181,7 +176,7 @@ copilot:
 ```yaml
 ---
 targets: ["cursor"]
-description: "Cursor-specific shortcuts"
+description: "Cursor-specific rules"
 cursor:
   alwaysApply: true
 ---

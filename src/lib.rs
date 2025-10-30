@@ -1,16 +1,7 @@
-//! AgentSync - CLI tool for synchronizing AI agent rules files
+//! CLI tool for synchronizing AI agent rules files.
 //!
-//! This crate provides functionality to maintain a single source of truth for AI agent rules
-//! in `.agentsync/rules/` and sync them bidirectionally with Cursor, GitHub Copilot, and Windsurf.
-//!
-//! # Examples
-//!
-//! ```no_run
-//! use agentsync::{Cli, run};
-//!
-//! let args = Cli::parse_args();
-//! run(args).expect("Failed to run agentsync");
-//! ```
+//! Maintains a single source of truth in `.agentsync/rules/` and syncs
+//! bidirectionally with Cursor, GitHub Copilot, and Windsurf.
 
 // Allow println/print in this module as it's a CLI tool
 #![allow(clippy::print_stdout)]
@@ -52,7 +43,7 @@ pub fn run(args: Cli) -> Result<()> {
             };
 
             if let Some(tool_name) = from {
-                // Sync FROM tool TO AgentSync
+                // Sync to AgentSync
                 info!("Running sync --from {tool_name}");
 
                 let project_root = fs::find_project_root()?;
@@ -62,7 +53,7 @@ pub fn run(args: Cli) -> Result<()> {
                 let result = sync::sync_from_tool(&project_root, tool, &options)?;
                 result.print_summary(dry_run);
             } else {
-                // Sync FROM AgentSync TO tools
+                // Sync from AgentSync
                 info!("Running sync to tools");
 
                 let project_root = fs::find_project_root()?;
@@ -83,9 +74,9 @@ pub fn run(args: Cli) -> Result<()> {
 }
 
 fn init_logging(verbose: bool) {
-    use tracing_subscriber::{fmt, EnvFilter};
+    use tracing_subscriber::{EnvFilter, fmt};
 
-    let log_level = if verbose { "debug" } else { "info" };
+    let log_level = if verbose { "debug" } else { "warn" };
 
     // Use try_init to avoid panicking if logger is already initialized (e.g., in tests)
     let _ = fmt()

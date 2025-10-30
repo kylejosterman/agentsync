@@ -1,6 +1,4 @@
-//! Error types for AgentSync
-//!
-//! This module defines all error types that can occur during AgentSync operations.
+//! Error types for AgentSync operations.
 
 use itertools::Itertools;
 use owo_colors::OwoColorize;
@@ -11,9 +9,6 @@ use thiserror::Error;
 pub enum AgentSyncError {
     #[error(transparent)]
     Io(#[from] std::io::Error),
-
-    #[error("YAML parsing error: {0}")]
-    YamlParse(#[from] serde_yaml::Error),
 
     #[error("JSON parsing error: {0}")]
     JsonParse(#[from] serde_json::Error),
@@ -32,13 +27,12 @@ pub enum AgentSyncError {
     #[error("{}", format_invalid_tool(tool))]
     InvalidTool { tool: String },
 
-    /// Custom Display for formatted error
-    #[error("{}", format_invalid_frontmatter(file, line.as_ref(), source))]
-    InvalidFrontmatter {
+    /// Custom Display for formatted frontmatter parse error
+    #[error("{}", format_frontmatter_parse_error(file, line.as_ref(), message))]
+    FrontmatterParse {
         file: String,
         line: Option<usize>,
-        #[source]
-        source: serde_yaml::Error,
+        message: String,
     },
 
     #[error(
@@ -109,15 +103,15 @@ fn format_invalid_tool(tool: &str) -> String {
 
     #[allow(clippy::format_push_string)]
     {
-        if let Some(suggested) = suggestion {
-            if tool.len() > 2 {
-                msg.push_str(&format!(
-                    "\n\n{}{} Did you mean {}?",
-                    "hint".cyan().bold(),
-                    ":".bold(),
-                    suggested.green()
-                ));
-            }
+        if let Some(suggested) = suggestion
+            && tool.len() > 2
+        {
+            msg.push_str(&format!(
+                "\n\n{}{} Did you mean {}?",
+                "hint".cyan().bold(),
+                ":".bold(),
+                suggested.green()
+            ));
         }
 
         msg.push_str(&format!(
@@ -162,11 +156,7 @@ fn format_permission_denied(path: &str) -> String {
     msg
 }
 
-fn format_invalid_frontmatter(
-    file: &str,
-    line: Option<&usize>,
-    source: &serde_yaml::Error,
-) -> String {
+fn format_frontmatter_parse_error(file: &str, line: Option<&usize>, message: &str) -> String {
     let mut msg = format!("Invalid frontmatter in {}", file.cyan());
 
     #[allow(clippy::format_push_string)]
@@ -178,23 +168,24 @@ fn format_invalid_frontmatter(
         msg.push_str(&format!(
             "\n\n{}\n  {}",
             "[parse error]".red().bold(),
-            source.to_string().replace('\n', "\n  ")
+            message.replace('\n', "\n  ")
         ));
 
         msg.push_str(&format!(
-            "\n\n{}{} Frontmatter must be valid YAML enclosed in {} markers",
+            "\n\n{}{} Frontmatter must be valid key-value pairs enclosed in {} markers",
             "hint".cyan().bold(),
             ":".bold(),
             "`---`".green()
         ));
 
         msg.push_str(&format!(
-            "\n{}{} Example format:\n  {}\n  {}\n  {}\n  {}",
+            "\n{}{} Example format:\n  {}\n  {}\n  {}\n  {}\n  {}",
             "hint".cyan().bold(),
             ":".bold(),
             "---".green(),
-            "name: my-rule".green(),
             "description: My rule description".green(),
+            "alwaysApply: false".green(),
+            "globs: **/*.rs".green(),
             "---".green()
         ));
     }
@@ -241,21 +232,4 @@ fn format_conversion_failed(
     msg
 }
 
-impl AgentSyncError {
-    /// Create an `InvalidFrontmatter` error with file and optional line context
-    #[must_use]
-    pub fn invalid_frontmatter(
-        file: impl Into<String>,
-        line: Option<usize>,
-        source: serde_yaml::Error,
-    ) -> Self {
-        Self::InvalidFrontmatter {
-            file: file.into(),
-            line,
-            source,
-        }
-    }
-}
-
-/// A specialized Result type for AgentSync operations
 pub type Result<T> = std::result::Result<T, AgentSyncError>;
